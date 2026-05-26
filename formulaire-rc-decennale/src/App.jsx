@@ -31,16 +31,47 @@ function App() {
   const today = new Date().toLocaleDateString('fr-FR');
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setErrors((prev) => ({ ...prev, [name]: false }));
+    if (type === 'checkbox') setErrors((prev) => ({ ...prev, priorite: false }));
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
+  const validateForm = () => {
+    let newErrors = {};
+    let isValid = true;
+    
+    const requiredFields = [
+      'raisonSociale', 'nomDirigeant', 'formeJuridique',
+      'adresse', 'ville', 'codePostal', 'telephone', 'email',
+      'montantMax', 'honorairesHT', 'honorairesTTC',
+      'contratPropose', 'motifChoix'
+    ];
+
+    for (let field of requiredFields) {
+      if (!formData[field] || formData[field].toString().trim() === '') {
+        newErrors[field] = true;
+        isValid = false;
+      }
+    }
+
+    if (!formData.prioriteCout && !formData.prioriteConformite && !formData.prioriteEtendue) {
+      newErrors.priorite = true;
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const generatePDF = async () => {
+    if (!validateForm()) return;
     setIsGenerating(true);
     try {
       // 1. Charger le PDF existant depuis le dossier public
@@ -126,6 +157,7 @@ function App() {
   };
 
   const generateWhatsApp = () => {
+    if (!validateForm()) return;
     const message = `
 *NOUVEAU DOSSIER - RC DÉCENNALE*
 *Date* : ${today}
@@ -174,8 +206,13 @@ ${[
   return (
     <div className="app-container animate-fade-in">
       <div className="header">
-        <h1>RC Décennale</h1>
-        <p>Formulaire d'adhésion Amadis Courtage</p>
+        <div className="header-logo">
+          <img src="/LOGO.jpg" alt="Logo Amadis Courtage" />
+        </div>
+        <div className="header-content">
+          <h1>RC DÉCENNALE</h1>
+          <p>FICHE D’INFORMATION ET DE CONSEIL</p>
+        </div>
       </div>
 
       {/* Le formulaire visible */}
@@ -185,16 +222,19 @@ ${[
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label">Raison Sociale / Nom commercial</label>
             <input type="text" name="raisonSociale" value={formData.raisonSociale} onChange={handleChange} className="form-input" />
+          {errors.raisonSociale && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label">Nom et Prénom du dirigeant</label>
             <input type="text" name="nomDirigeant" value={formData.nomDirigeant} onChange={handleChange} className="form-input" />
+          {errors.nomDirigeant && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Forme juridique</label>
             <input type="text" name="formeJuridique" value={formData.formeJuridique} onChange={handleChange} className="form-input" />
+          {errors.formeJuridique && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
@@ -214,21 +254,25 @@ ${[
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label">Adresse du siège social</label>
             <input type="text" name="adresse" value={formData.adresse} onChange={handleChange} className="form-input" />
+          {errors.adresse && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Code postal</label>
             <input type="text" name="codePostal" value={formData.codePostal} onChange={handleChange} className="form-input" />
+          {errors.codePostal && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Ville</label>
             <input type="text" name="ville" value={formData.ville} onChange={handleChange} className="form-input" />
+          {errors.ville && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Téléphone fixe</label>
             <input type="text" name="telephone" value={formData.telephone} onChange={handleChange} className="form-input" />
+          {errors.telephone && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group">
@@ -273,18 +317,19 @@ ${[
         <h2 className="section-title">Recueil des Besoins</h2>
         <div className="form-group" style={{ marginBottom: '2rem' }}>
           <label className="form-label" style={{ marginBottom: '1rem' }}>Priorités du client :</label>
+          {errors.priorite && <span style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block'}}>Veuillez sélectionner au moins une priorité</span>}
           <div className="checkbox-group">
-            <label className="checkbox-label">
+            <label className="checkbox-label priority-label">
               <input type="checkbox" name="prioriteCout" checked={formData.prioriteCout} onChange={handleChange} />
-              <div><strong>Le coût :</strong> Recherche de la prime la plus compétitive.</div>
+              <div><strong>Le coût :</strong> Recherche de la prime d'assurance la plus compétitive pour votre budget.</div>
             </label>
-            <label className="checkbox-label">
+            <label className="checkbox-label priority-label">
               <input type="checkbox" name="prioriteConformite" checked={formData.prioriteConformite} onChange={handleChange} />
-              <div><strong>La conformité :</strong> Obtention urgente d'une attestation.</div>
+              <div><strong>La conformité / Rapidité :</strong> Obtention urgente d'une attestation conforme pour le démarrage immédiat de vos chantiers.</div>
             </label>
-            <label className="checkbox-label">
+            <label className="checkbox-label priority-label">
               <input type="checkbox" name="prioriteEtendue" checked={formData.prioriteEtendue} onChange={handleChange} />
-              <div><strong>L'étendue :</strong> Besoin de plafonds de garantie élevés.</div>
+              <div><strong>L'étendue des garanties :</strong> Besoin de plafonds de garantie élevés ou d'options spécifiques (ex: couverture de la sous-traitance, dommages en cours de chantier).</div>
             </label>
           </div>
         </div>
@@ -292,18 +337,24 @@ ${[
         <div className="form-group">
           <label className="form-label">Montant maximal des chantiers envisagés (€)</label>
           <input type="number" name="montantMax" value={formData.montantMax} onChange={handleChange} className="form-input" />
+          {errors.montantMax && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
         </div>
       </div>
 
       <div className="glass-card">
-        <h2 className="section-title">Solution d'assurance proposée (Rempli par le courtier)</h2>
+        <h2 className="section-title">Solution d'assurance proposée</h2>
+        <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)', lineHeight: '1.6', fontSize: '1.05rem' }}>
+          Au vu des besoins que vous avez exprimés au terme du présent « diagnostic », nous vous proposons et recommandons de souscrire le(s) contrat(s)/garantie(s) suivant(s) :
+        </p>
         <div className="form-group" style={{ marginBottom: '1rem' }}>
           <label className="form-label">Contrat(s)/Garantie(s) recommandé(s)</label>
           <input type="text" name="contratPropose" value={formData.contratPropose} onChange={handleChange} className="form-input" />
+          {errors.contratPropose && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
         </div>
         <div className="form-group">
           <label className="form-label">Motif(s) de ce choix</label>
           <input type="text" name="motifChoix" value={formData.motifChoix} onChange={handleChange} className="form-input" />
+          {errors.motifChoix && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
         </div>
       </div>
 
@@ -313,10 +364,12 @@ ${[
           <div className="form-group">
             <label className="form-label">Forfait d'honoraires HT (€)</label>
             <input type="number" name="honorairesHT" value={formData.honorairesHT} onChange={handleChange} className="form-input" />
+          {errors.honorairesHT && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
           <div className="form-group">
             <label className="form-label">Forfait d'honoraires TTC (€)</label>
             <input type="number" name="honorairesTTC" value={formData.honorairesTTC} onChange={handleChange} className="form-input" />
+          {errors.honorairesTTC && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
         </div>
       </div>
