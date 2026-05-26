@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
-import html2pdf from 'html2pdf.js';
+import React, { useState } from 'react';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Download, MessageCircle } from 'lucide-react';
-import DocumentTemplate from './DocumentTemplate';
 import './index.css';
 
 function App() {
@@ -23,16 +22,15 @@ function App() {
     prioriteConformite: false,
     prioriteEtendue: false,
     montantMax: '',
+    honorairesHT: '',
+    honorairesTTC: '',
     contratPropose: '',
     motifChoix: '',
-    checkConnaissance: false,
-    checkInfos: false,
-    checkRefus: false,
   });
 
+  const today = new Date().toLocaleDateString('fr-FR');
+
   const [isGenerating, setIsGenerating] = useState(false);
-  
-  const documentRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -44,33 +42,93 @@ function App() {
 
   const generatePDF = async () => {
     setIsGenerating(true);
-    
-    // Un petit délai pour s'assurer que le composant caché est bien à jour
-    setTimeout(() => {
-      const element = documentRef.current;
+    try {
+      // 1. Charger le PDF existant depuis le dossier public
+      const existingPdfBytes = await fetch('/fiche_rc_decennale.pdf').then((res) => res.arrayBuffer());
       
-      const opt = {
-        margin:       0,
-        filename:     `RC_Decennale_${formData.raisonSociale || 'Client'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: 'css' }
+      // 2. Créer un document pdf-lib à partir de ces bytes
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      
+      const pages = pdfDoc.getPages();
+      const page2 = pages[1];
+      const page3 = pages[2];
+
+      // Fonction utilitaire pour écrire du texte
+      const drawText = (page, text, x, y, size = 10, color = rgb(1, 1, 1), font = helveticaFont) => {
+        if (!text) return;
+        page.drawText(text.toString(), {
+          x,
+          y,
+          size,
+          font: font,
+          color: color,
+        });
       };
 
-      html2pdf().set(opt).from(element).save().then(() => {
-        setIsGenerating(false);
-      }).catch((err) => {
-        console.error('Erreur PDF:', err);
-        setIsGenerating(false);
-        alert('Erreur lors de la génération du PDF.');
-      });
-    }, 100);
+      // --- PAGE 2 : Ajustements ---
+      drawText(page2, formData.raisonSociale, 265, 747);
+      drawText(page2, formData.nomDirigeant, 265, 722);
+      drawText(page2, formData.formeJuridique, 265, 697);
+      drawText(page2, formData.siret, 265, 674);
+      if (formData.enCoursCreation) drawText(page2, 'X', 515, 675, 12);
+      
+      drawText(page2, formData.adresse, 265, 649);
+      drawText(page2, formData.ville, 140, 631);
+      drawText(page2, formData.codePostal, 440, 631);
+      drawText(page2, formData.telephone, 140, 606);
+      drawText(page2, formData.mobile, 440, 606);
+      drawText(page2, formData.email, 140, 583);
+
+      // Conformité (PPE)
+      if (formData.ppe === 'OUI') drawText(page2, 'X', 323, 563, 12);
+      if (formData.ppe === 'NON') drawText(page2, 'X', 373, 562, 12);
+      if (formData.ppeLien === 'OUI') drawText(page2, 'X', 372, 548, 12);
+      if (formData.ppeLien === 'NON') drawText(page2, 'X', 420, 549, 12);
+      
+      // Recueil des besoins (Priorités)
+      if (formData.prioriteCout) drawText(page2, 'X', 20, 410, 14);
+      if (formData.prioriteConformite) drawText(page2, 'X', 20, 396, 14);
+      if (formData.prioriteEtendue) drawText(page2, 'X', 20, 381, 14);
+
+      drawText(page2, formData.montantMax, 365, 340, 11, rgb(0, 0, 0), helveticaBoldFont);
+
+      // --- PAGE 3 : Ajustements ---
+      drawText(page3, formData.contratPropose, 50, 316);
+      drawText(page3, formData.motifChoix, 200, 295);
+
+      // Conditions Financières (Coordonnées approximatives, à ajuster si besoin)
+      if (formData.honorairesHT) {
+        drawText(page3, formData.honorairesHT, 270, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
+      }
+      if (formData.honorairesTTC) {
+        drawText(page3, formData.honorairesTTC, 360, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
+      }
+
+      // Signature Date
+      drawText(page3, today, 100, 118);
+
+      // 3. Sauvegarder et télécharger
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `RC_Decennale_${formData.raisonSociale || 'Client'}.pdf`;
+      link.click();
+
+    } catch (error) {
+      console.error('Erreur PDF:', error);
+      alert('Erreur lors de la génération du PDF avec pdf-lib.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const generateWhatsApp = () => {
     const message = `
 *NOUVEAU DOSSIER - RC DÉCENNALE*
+*Date* : ${today}
 
 *1. INFORMATIONS ADHÉRENT*
 *Raison Sociale* : ${formData.raisonSociale || 'Non renseigné'}
@@ -103,12 +161,10 @@ ${[
 *Contrat recommandé* : ${formData.contratPropose || 'Non renseigné'}
 *Motif du choix* : ${formData.motifChoix || 'Non renseigné'}
 
-*6. DÉCLARATIONS DU CLIENT*
-${[
-  formData.checkConnaissance ? "✅ A pris connaissance du document d'information" : null,
-  formData.checkInfos ? "✅ Accepte de recevoir des offres/actualités" : null,
-  formData.checkRefus ? "✅ A conscience des risques en cas de refus d'information" : null
-].filter(Boolean).join('\n')}    `.trim();
+*6. CONDITIONS FINANCIÈRES*
+*Honoraires HT* : ${formData.honorairesHT ? formData.honorairesHT + ' €' : 'Non renseigné'}
+*Honoraires TTC* : ${formData.honorairesTTC ? formData.honorairesTTC + ' €' : 'Non renseigné'}
+    `.trim();
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
@@ -252,39 +308,38 @@ ${[
       </div>
 
       <div className="glass-card">
-        <h2 className="section-title">Déclarations et Signature</h2>
-        
-        <div className="checkbox-group" style={{ marginBottom: '2rem' }}>
-          <label className="checkbox-label">
-            <input type="checkbox" name="checkConnaissance" checked={formData.checkConnaissance} onChange={handleChange} />
-            <div>Je reconnais avoir pris connaissance de ce document...</div>
-          </label>
-          <label className="checkbox-label">
-            <input type="checkbox" name="checkInfos" checked={formData.checkInfos} onChange={handleChange} />
-            <div>Je souhaite être informé par courrier/sms des actualités...</div>
-          </label>
-          <label className="checkbox-label">
-            <input type="checkbox" name="checkRefus" checked={formData.checkRefus} onChange={handleChange} />
-            <div>J’ai parfaitement conscience que le refus de communiquer...</div>
-          </label>
+        <h2 className="section-title">Conditions Financières</h2>
+        <div className="form-grid two-cols">
+          <div className="form-group">
+            <label className="form-label">Forfait d'honoraires HT (€)</label>
+            <input type="number" name="honorairesHT" value={formData.honorairesHT} onChange={handleChange} className="form-input" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Forfait d'honoraires TTC (€)</label>
+            <input type="number" name="honorairesTTC" value={formData.honorairesTTC} onChange={handleChange} className="form-input" />
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-card">
+        <h2 className="section-title">Date du jour</h2>
+        <div className="form-group">
+          <p style={{ fontSize: '1.1rem', color: 'var(--text-color)', fontWeight: '500' }}>
+            Date : {today}
+          </p>
         </div>
       </div>
 
       <div className="actions-container">
         <button onClick={generatePDF} disabled={isGenerating} className="btn btn-primary">
           {isGenerating ? <div className="loading-spinner" /> : <Download size={20} />}
-          {isGenerating ? 'Génération du document V2...' : 'Générer le PDF (Design Natif)'}
+          {isGenerating ? 'Génération du document V2...' : 'Générer le PDF'}
         </button>
         
         <button onClick={generateWhatsApp} className="btn btn-whatsapp">
           <MessageCircle size={20} />
           Préparer le message WhatsApp
         </button>
-      </div>
-
-      {/* Le conteneur caché pour html2pdf */}
-      <div className="pdf-hidden-container">
-        <DocumentTemplate ref={documentRef} data={formData} />
       </div>
 
     </div>
