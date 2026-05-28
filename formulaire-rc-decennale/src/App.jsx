@@ -163,7 +163,7 @@ function App() {
       // Info Client (Raison Sociale & Siret)
       let clientInfo = formData.raisonSociale || '';
       if (formData.siret) {
-        clientInfo += ' - ' + formData.siret;
+        clientInfo += ' - Siret : ' + formData.siret;
       } else if (formData.enCoursCreation) {
         clientInfo += ' - (société en cours de création)';
       }
