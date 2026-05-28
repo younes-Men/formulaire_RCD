@@ -37,10 +37,24 @@ function App() {
     const { name, value, type, checked } = e.target;
     setErrors((prev) => ({ ...prev, [name]: false }));
     if (type === 'checkbox') setErrors((prev) => ({ ...prev, priorite: false }));
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    
+    setFormData((prev) => {
+      const updatedData = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+
+      if (name === 'honorairesHT') {
+        const ht = parseFloat(value);
+        if (!isNaN(ht)) {
+          updatedData.honorairesTTC = (ht * 1.2).toFixed(2);
+        } else if (value === '') {
+          updatedData.honorairesTTC = '';
+        }
+      }
+
+      return updatedData;
+    });
   };
 
   const validateForm = () => {
@@ -131,10 +145,10 @@ function App() {
 
       // Conditions Financières (Coordonnées approximatives, à ajuster si besoin)
       if (formData.honorairesHT) {
-        drawText(page3, formData.honorairesHT, 270, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
+        drawText(page3, formData.honorairesHT, 260, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
       }
       if (formData.honorairesTTC) {
-        drawText(page3, formData.honorairesTTC, 360, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
+        drawText(page3, formData.honorairesTTC, 349, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
       }
 
       // Signature Date
@@ -211,7 +225,7 @@ ${[
         </div>
         <div className="header-content">
           <h1>RC DÉCENNALE</h1>
-          <p>FICHE D’INFORMATION ET DE CONSEIL</p>
+          <p>Fiche d'information et de conseil</p>
         </div>
       </div>
 
@@ -368,7 +382,7 @@ ${[
           </div>
           <div className="form-group">
             <label className="form-label">Forfait d'honoraires TTC (€)</label>
-            <input type="number" name="honorairesTTC" value={formData.honorairesTTC} onChange={handleChange} className="form-input" />
+            <input type="number" name="honorairesTTC" value={formData.honorairesTTC} readOnly className="form-input" style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }} />
           {errors.honorairesTTC && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
         </div>

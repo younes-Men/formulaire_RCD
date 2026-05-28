@@ -130,6 +130,35 @@ body {
   }
 }
 
+/* Responsive header */
+@media (max-width: 640px) {
+  .header {
+    flex-direction: row;
+    margin-bottom: 1.5rem;
+  }
+  .header-logo {
+    flex: 0.9;
+    padding: 1rem 0.2rem;
+  }
+  .header-content {
+    flex: 1.4;
+    padding: 1rem 0.5rem;
+  }
+  .header-logo img {
+    max-width: 100%;
+    max-height: 60px;
+  }
+  .header h1 {
+    font-size: 1.1rem;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+  }
+  .header p {
+    font-size: 0.55rem;
+    white-space: nowrap;
+  }
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
