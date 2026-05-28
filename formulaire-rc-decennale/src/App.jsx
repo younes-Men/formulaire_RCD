@@ -37,6 +37,7 @@ function App() {
     const { name, value, type, checked } = e.target;
     setErrors((prev) => ({ ...prev, [name]: false }));
     if (type === 'checkbox') setErrors((prev) => ({ ...prev, priorite: false }));
+    if (name === 'siret' || name === 'enCoursCreation') setErrors((prev) => ({ ...prev, siretGroup: false }));
     
     setFormData((prev) => {
       const updatedData = {
@@ -77,6 +78,11 @@ function App() {
 
     if (!formData.prioriteCout && !formData.prioriteConformite && !formData.prioriteEtendue) {
       newErrors.priorite = true;
+      isValid = false;
+    }
+
+    if (!formData.siret && !formData.enCoursCreation) {
+      newErrors.siretGroup = true;
       isValid = false;
     }
 
@@ -152,7 +158,16 @@ function App() {
       }
 
       // Signature Date
-      drawText(page3, today, 100, 118);
+      drawText(page3, today, 90, 118, 10, rgb(0, 0, 0), helveticaFont);
+
+      // Info Client (Raison Sociale & Siret)
+      let clientInfo = formData.raisonSociale || '';
+      if (formData.siret) {
+        clientInfo += ' - ' + formData.siret;
+      } else if (formData.enCoursCreation) {
+        clientInfo += ' - (société en cours de création)';
+      }
+      drawText(page3, clientInfo, 80, 95, 10, rgb(0, 0, 0), helveticaFont);
 
       // 3. Sauvegarder et télécharger
       const pdfBytes = await pdfDoc.save();
@@ -258,6 +273,7 @@ ${[
               <input type="checkbox" name="enCoursCreation" checked={formData.enCoursCreation} onChange={handleChange} />
               Société en cours de création
             </label>
+            {errors.siretGroup && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Veuillez renseigner le SIRET ou cocher la case</span>}
           </div>
         </div>
       </div>
