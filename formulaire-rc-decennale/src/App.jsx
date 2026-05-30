@@ -64,7 +64,7 @@ function App() {
     
     const requiredFields = [
       'raisonSociale', 'nomDirigeant', 'formeJuridique',
-      'adresse', 'ville', 'codePostal', 'telephone', 'email',
+      'adresse', 'ville', 'codePostal', 'telephone', 'mobile', 'email',
       'montantMax', 'honorairesHT', 'honorairesTTC',
       'contratPropose', 'motifChoix'
     ];
@@ -163,7 +163,7 @@ function App() {
       // Info Client (Raison Sociale & Siret)
       let clientInfo = formData.raisonSociale || '';
       if (formData.siret) {
-        clientInfo += ' - Siret : ' + formData.siret;
+        clientInfo += ' - SIRET : ' + formData.siret;
       } else if (formData.enCoursCreation) {
         clientInfo += ' - (société en cours de création)';
       }
@@ -308,11 +308,13 @@ ${[
           <div className="form-group">
             <label className="form-label">Mobile</label>
             <input type="text" name="mobile" value={formData.mobile} onChange={handleChange} className="form-input" />
+          {errors.mobile && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label className="form-label">E-mail</label>
             <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" />
+          {errors.email && <span style={{color: '#ef4444', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block'}}>Ce champ est obligatoire</span>}
           </div>
         </div>
       </div>
