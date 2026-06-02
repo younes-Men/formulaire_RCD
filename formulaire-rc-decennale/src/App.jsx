@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { Download, MessageCircle } from 'lucide-react';
+import { Download, MessageCircle, User } from 'lucide-react';
 import './index.css';
+import LoginForm from './components/LoginForm';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [commercialName, setCommercialName] = useState('');
+  const [sessionToken, setSessionToken] = useState(null);
   const [formData, setFormData] = useState({
     raisonSociale: '',
     nomDirigeant: '',
@@ -32,6 +36,25 @@ function App() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const handleLogin = (data) => {
+    setCommercialName(data.name);
+    setSessionToken(data.token);
+    setIsAuthenticated(true);
+  };
+
+  const incrementStats = async () => {
+    if (!sessionToken) return;
+    try {
+      await fetch('http://localhost:3001/api/increment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken })
+      });
+    } catch (e) {
+      console.error('Erreur incrémentation stats', e);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -87,12 +110,18 @@ function App() {
     }
 
     setErrors(newErrors);
+    
+    if (!isValid) {
+      alert('Veuillez remplir tous les champs obligatoires (indiqués en rouge) avant de continuer.');
+    }
+    
     return isValid;
   };
 
   const generatePDF = async () => {
     if (!validateForm()) return;
     setIsGenerating(true);
+    await incrementStats();
     try {
       // 1. Charger le PDF existant depuis le dossier public
       const existingPdfBytes = await fetch('/fiche_rc_decennale.pdf').then((res) => res.arrayBuffer());
@@ -185,8 +214,9 @@ function App() {
     }
   };
 
-  const generateWhatsApp = () => {
+  const generateWhatsApp = async () => {
     if (!validateForm()) return;
+    await incrementStats();
     const message = `
 *NOUVEAU DOSSIER - RC DÉCENNALE*
 *Date* : ${today}
@@ -232,6 +262,10 @@ ${[
     window.open(whatsappUrl, '_blank');
   };
 
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
   return (
     <div className="app-container animate-fade-in">
       <div className="header">
@@ -241,6 +275,11 @@ ${[
         <div className="header-content">
           <h1>RC DÉCENNALE</h1>
           <p>Fiche d'information et de conseil</p>
+          {commercialName && (
+            <div style={{ marginTop: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#FAFAFA', fontSize: '0.95rem', fontWeight: 'bold', background: 'rgba(0,0,0,0.1)', padding: '0.4rem 0.8rem', borderRadius: '20px', width: 'fit-content' }}>
+              <User size={16} /> Connecté : {commercialName}
+            </div>
+          )}
         </div>
       </div>
 
