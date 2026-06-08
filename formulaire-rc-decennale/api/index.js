@@ -1,47 +1,39 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { kv } from '@vercel/kv';
 
 const app = express();
-const port = process.env.PORT || 3001;
-const dbPath = path.join(__dirname, 'database.json');
 
 app.use(cors());
 app.use(bodyParser.json());
 
-const readDb = () => {
+const DB_KEY = 'rc_decennale_db';
+
+const readDb = async () => {
   try {
-    const data = fs.readFileSync(dbPath, 'utf8');
-    return JSON.parse(data);
+    const data = await kv.get(DB_KEY);
+    if (data) return data;
+    return { adminPassword: 'admin', accounts: [] };
   } catch (err) {
+    console.error('Erreur KV readDb:', err);
     return { adminPassword: 'admin', accounts: [] };
   }
 };
 
-const writeDb = (data) => {
-  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-};
-
-const generateRandomString = (length) => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+const writeDb = async (data) => {
+  try {
+    await kv.set(DB_KEY, data);
+  } catch (err) {
+    console.error('Erreur KV writeDb:', err);
   }
-  return result;
 };
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) return res.status(400).json({ error: 'Login et mot de passe requis.' });
 
-  const db = readDb();
+  const db = await readDb();
   const accountIndex = db.accounts.findIndex(acc => acc.login === login && acc.password === password);
 
   if (accountIndex === -1) {
@@ -50,19 +42,17 @@ app.post('/api/login', (req, res) => {
 
   const account = db.accounts[accountIndex];
 
-  // Si c'est la première connexion, on peut optionnellement marquer qu'il s'est connecté au moins une fois
   if (!account.startedAt) {
     account.startedAt = Date.now();
-    writeDb(db);
+    await writeDb(db);
   }
 
-  // Connexion toujours valide pour les commerciaux
   return res.json({ success: true, token: account.token, name: account.name || account.login });
 });
 
-app.post('/api/admin/add', (req, res) => {
+app.post('/api/admin/add', async (req, res) => {
   const { adminPassword, name, login, password } = req.body;
-  const db = readDb();
+  const db = await readDb();
 
   if (adminPassword !== db.adminPassword) {
     return res.status(403).json({ error: 'Mot de passe administrateur incorrect.' });
@@ -72,7 +62,6 @@ app.post('/api/admin/add', (req, res) => {
     return res.status(400).json({ error: 'Tous les champs sont requis.' });
   }
 
-  // Vérifier si le login existe déjà
   if (db.accounts.some(acc => acc.login === login)) {
     return res.status(400).json({ error: 'Ce login existe déjà.' });
   }
@@ -97,14 +86,14 @@ app.post('/api/admin/add', (req, res) => {
   };
 
   db.accounts.push(newAccount);
-  writeDb(db);
+  await writeDb(db);
 
   res.json({ success: true, account: newAccount });
 });
 
-app.post('/api/admin/edit', (req, res) => {
+app.post('/api/admin/edit', async (req, res) => {
   const { adminPassword, oldLogin, name, login, password } = req.body;
-  const db = readDb();
+  const db = await readDb();
 
   if (adminPassword !== db.adminPassword) {
     return res.status(403).json({ error: 'Mot de passe administrateur incorrect.' });
@@ -119,7 +108,6 @@ app.post('/api/admin/edit', (req, res) => {
     return res.status(404).json({ error: 'Compte introuvable.' });
   }
 
-  // Si on change le login, vérifier qu'il n'existe pas déjà ailleurs
   if (oldLogin !== login && db.accounts.some(acc => acc.login === login)) {
     return res.status(400).json({ error: 'Ce nouveau login existe déjà.' });
   }
@@ -127,14 +115,14 @@ app.post('/api/admin/edit', (req, res) => {
   db.accounts[accountIndex].name = name;
   db.accounts[accountIndex].login = login;
   db.accounts[accountIndex].password = password;
-  writeDb(db);
+  await writeDb(db);
 
   res.json({ success: true });
 });
 
-app.post('/api/admin/delete', (req, res) => {
+app.post('/api/admin/delete', async (req, res) => {
   const { adminPassword, login } = req.body;
-  const db = readDb();
+  const db = await readDb();
 
   if (adminPassword !== db.adminPassword) {
     return res.status(403).json({ error: 'Mot de passe administrateur incorrect.' });
@@ -150,14 +138,14 @@ app.post('/api/admin/delete', (req, res) => {
   }
 
   db.accounts.splice(accountIndex, 1);
-  writeDb(db);
+  await writeDb(db);
 
   res.json({ success: true });
 });
 
-app.post('/api/admin/list', (req, res) => {
+app.post('/api/admin/list', async (req, res) => {
   const { adminPassword } = req.body;
-  const db = readDb();
+  const db = await readDb();
 
   if (adminPassword !== db.adminPassword) {
     return res.status(403).json({ error: 'Mot de passe administrateur incorrect.' });
@@ -176,12 +164,11 @@ app.post('/api/admin/list', (req, res) => {
   res.json({ success: true, accounts });
 });
 
-// Endpoint pour vérifier la validité de la session via le token
-app.post('/api/verify', (req, res) => {
+app.post('/api/verify', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Token requis.' });
 
-  const db = readDb();
+  const db = await readDb();
   const account = db.accounts.find(acc => acc.token === token);
 
   if (!account) return res.status(401).json({ error: 'Session invalide.' });
@@ -189,21 +176,20 @@ app.post('/api/verify', (req, res) => {
   res.json({ success: true, name: account.name || account.login });
 });
 
-app.post('/api/increment', (req, res) => {
+app.post('/api/increment', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Token requis.' });
 
-  const db = readDb();
+  const db = await readDb();
   const account = db.accounts.find(acc => acc.token === token);
 
   if (!account) return res.status(401).json({ error: 'Session invalide.' });
 
   account.documentsGenerated = (account.documentsGenerated || 0) + 1;
-  writeDb(db);
+  await writeDb(db);
 
   res.json({ success: true, documentsGenerated: account.documentsGenerated });
 });
 
-app.listen(port, () => {
-  console.log(`Serveur API démarré sur http://localhost:${port}`);
-});
+// Important: pour Vercel Serverless Functions, il faut exporter l'app Express
+export default app;

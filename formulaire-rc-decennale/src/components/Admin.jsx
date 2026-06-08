@@ -16,7 +16,7 @@ function Admin() {
 
   const fetchAccounts = async (pwd) => {
     try {
-      const res = await fetch('http://localhost:3001/api/admin/list', {
+      const res = await fetch('/api/admin/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminPassword: pwd })
@@ -56,7 +56,7 @@ function Admin() {
     
     setIsLoading(true);
     try {
-      const endpoint = isEditing ? 'http://localhost:3001/api/admin/edit' : 'http://localhost:3001/api/admin/add';
+      const endpoint = isEditing ? '/api/admin/edit' : '/api/admin/add';
       const bodyData = isEditing 
         ? { adminPassword, oldLogin: editingOldLogin, ...newCommercial }
         : { adminPassword, ...newCommercial };
@@ -93,7 +93,7 @@ function Admin() {
     if (!window.confirm('Voulez-vous vraiment supprimer cet accès ?')) return;
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/admin/delete', {
+      const res = await fetch('/api/admin/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminPassword, login })

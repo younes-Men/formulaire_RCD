@@ -46,7 +46,7 @@ function App() {
   const incrementStats = async () => {
     if (!sessionToken) return;
     try {
-      await fetch('http://localhost:3001/api/increment', {
+      await fetch('/api/increment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: sessionToken })
