@@ -35,9 +35,10 @@ function App() {
   const today = new Date().toLocaleDateString('fr-FR');
 
   const formatCurrency = (val) => {
-    if (!val) return '';
-    const num = parseFloat(val);
-    return isNaN(num) ? val : num.toFixed(2).replace('.', ',');
+    if (val === undefined || val === null || val === '') return '';
+    const strVal = String(val).replace(/\s/g, '').replace(',', '.');
+    const num = parseFloat(strVal);
+    return isNaN(num) ? String(val) : num.toFixed(2).replace('.', ',');
   };
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -214,7 +215,7 @@ function App() {
 
     } catch (error) {
       console.error('Erreur PDF:', error);
-      alert('Erreur lors de la génération du PDF avec pdf-lib.');
+      alert('Erreur lors de la génération du PDF avec pdf-lib: ' + error.message);
     } finally {
       setIsGenerating(false);
     }
