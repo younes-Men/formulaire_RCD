@@ -179,7 +179,9 @@ function App() {
       if (formData.prioriteConformite) drawText(page2, 'X', 20, 396, 14);
       if (formData.prioriteEtendue) drawText(page2, 'X', 20, 381, 14);
 
-      drawText(page2, formData.montantMax, 365, 340, 11, rgb(0, 0, 0), helveticaBoldFont);
+      if (formData.montantMax) {
+        drawText(page2, formatCurrency(formData.montantMax), 365, 340, 11, rgb(0, 0, 0), helveticaBoldFont);
+      }
 
       // --- PAGE 3 : Ajustements ---
       drawText(page3, formData.contratPropose, 50, 316);
@@ -187,7 +189,7 @@ function App() {
 
       // Conditions Financières (Coordonnées approximatives, à ajuster si besoin)
       if (formData.honorairesHT) {
-        drawText(page3, formatCurrency(formData.honorairesHT), 260, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
+        drawText(page3, formatCurrency(formData.honorairesHT), 255, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
       }
       if (formData.honorairesTTC) {
         drawText(page3, formatCurrency(formData.honorairesTTC), 349, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
@@ -253,7 +255,7 @@ ${[
   formData.prioriteConformite ? "- La conformité / Rapidité" : null,
   formData.prioriteEtendue ? "- L'étendue des garanties" : null
 ].filter(Boolean).join('\n')}
-*Montant maximal des chantiers* : ${formData.montantMax ? formData.montantMax + ' €' : 'Non renseigné'}
+*Montant maximal des chantiers* : ${formData.montantMax ? formatCurrency(formData.montantMax) + ' €' : 'Non renseigné'}
 
 *5. SOLUTION PROPOSÉE*
 *Contrat recommandé* : ${formData.contratPropose || 'Non renseigné'}
