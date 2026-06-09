@@ -34,6 +34,12 @@ function App() {
 
   const today = new Date().toLocaleDateString('fr-FR');
 
+  const formatCurrency = (val) => {
+    if (!val) return '';
+    const num = parseFloat(val);
+    return isNaN(num) ? val : num.toFixed(2).replace('.', ',');
+  };
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -180,10 +186,10 @@ function App() {
 
       // Conditions Financières (Coordonnées approximatives, à ajuster si besoin)
       if (formData.honorairesHT) {
-        drawText(page3, formData.honorairesHT, 260, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
+        drawText(page3, formatCurrency(formData.honorairesHT), 260, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // HT
       }
       if (formData.honorairesTTC) {
-        drawText(page3, formData.honorairesTTC, 349, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
+        drawText(page3, formatCurrency(formData.honorairesTTC), 349, 750, 11, rgb(0, 0, 0), helveticaBoldFont); // TTC
       }
 
       // Signature Date
@@ -253,8 +259,8 @@ ${[
 *Motif du choix* : ${formData.motifChoix || 'Non renseigné'}
 
 *6. CONDITIONS FINANCIÈRES*
-*Honoraires HT* : ${formData.honorairesHT ? formData.honorairesHT + ' €' : 'Non renseigné'}
-*Honoraires TTC* : ${formData.honorairesTTC ? formData.honorairesTTC + ' €' : 'Non renseigné'}
+*Honoraires HT* : ${formData.honorairesHT ? formatCurrency(formData.honorairesHT) + ' €' : 'Non renseigné'}
+*Honoraires TTC* : ${formData.honorairesTTC ? formatCurrency(formData.honorairesTTC) + ' €' : 'Non renseigné'}
     `.trim();
 
     const encodedMessage = encodeURIComponent(message);
